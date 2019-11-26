@@ -22,23 +22,27 @@ for i in range(len(inst)): # create a list with nested lists
         else:
             instruction[i].append(inst[i][j])
 
+print("instructions:")
+print(instruction)
 
-
-
+#assign to objects
 instruction_ob = []
 dest = 0
 s1 = 0
 s2 = 0
 
-length = len(instruction)
+#length = len(instruction)
 
 for i in instruction:
+    length=len(i)
+    print(len(i))
+    print(i)
     if length == 4:
-        dest = i[1][:-1]
-        if len(i[2][-1]) == 1:
-            s1 = int(i[2][:-1])
+        dest = i[1]
+        if len(i[2]) == 1:
+            s1 = int(i[2])
         else:
-            s1 = i[2][:-1]
+            s1 = i[2]
         if len(i[3]) == 1:
             s2 = len(i[3])
         else:
@@ -50,8 +54,7 @@ for i in instruction:
         s2 = 0
 
     instruction_ob.append(instClass(i[0], dest, s1, s2))
-print("Instructions after parsing")
-print(instruction)
+
 
 with open(r"C:\Users\hashi\Desktop\ACA\ACA project\config.txt") as f:
     config = f.read().splitlines()
@@ -101,10 +104,9 @@ for i in cycles:
         if "memory:" in i:
              mem=int(i[2])
 
-print(fp_add)
-print(mul_pipeline)
-print(mem)
-
+#PIPELINE LOGIC STARTS
+for i in instruction_ob:
+    print(i.s2)
 operands=[False,False,False,False,False,False,False,False]
 exe_in_ld=10000
 exe_in_add=1000
@@ -121,7 +123,161 @@ mul_pass=[0]*len(instruction_ob)
 div_pass=[0]*len(instruction_ob)
 print(len(instruction_ob))
 
-counter = [0]*len(instruction_ob)
+registers = [0]*32
+
+fp_registers = [0]*32
+
+def hazard(instruction_ob):
+    x=0
+    y=0
+    z=0
+    if instruction_ob.name =="L.D":
+        x = int(instruction_ob.dest[1:])
+        z = int(instruction_ob.s2[1:])
+        if (registers[x]==0 or fp_registers[x] == 0) is True:
+            if (registers[z]==0 or fp_registers[z] == 0) is True:
+                return 0
+            else:
+                return 1
+
+        else:
+            return 1
+
+    if instruction_ob.name=="DADDI":
+        x = int(instruction_ob.dest[1:])
+        y = int(instruction_ob.s1[1:])
+
+        if (registers[x] == 0 or fp_registers[x] == 0) is True:
+            if (registers[y] == 0 or fp_registers[y]) is True:
+                return 0
+            else:
+                return 1
+        else:
+            return 1
+
+    if instruction_ob.name in ["BNE","BE"]:
+        x = int(instruction_ob.dest[1:])
+        y = int(instruction_ob.s1[1:])
+        if (registers[x] == 0 or fp_registers[x] == 0) is True:
+            if (registers[y] == 0 or fp_registers[y] == 0) is True:
+                return 0
+            else:
+                return 1
+        else:
+            return 1
+
+    else:
+
+        if instruction_ob.name in ["ADD.D","SUB.D","MUL.D","DIV.D","DSUB"]:
+            x = int(instruction_ob.dest[1:])
+            y = int(instruction_ob.s1[1:])
+            z = int(instruction_ob.s2[1:])
+            if (registers[x] == 0 or fp_registers[x] == 0) is True:
+                if (registers[y] == 0 or fp_registers[y] == 0) is True:
+                    if (registers[z] == 0 or fp_registers[z]) is True:
+                        return 0
+                    else:
+                        return 1
+                else:
+                    return 1
+            else:
+                return 1
+        else:
+            return 1
+
+def make_busy(instruction_ob):
+    x=0
+    y=0
+    z=0
+    if instruction_ob.name=="L.D":
+        x = int(instruction_ob.dest[1:])
+        z = int(instruction_ob.s2[1:])
+        if instruction_ob.dest[0]=="F":
+            fp_registers[x] = 1
+        if instruction_ob.dest[0] =="R":
+            registers[x] = 1
+        if instruction_ob.s2[0] == "F":
+            fp_registers[z] = 1
+        if instruction_ob.s2[0] == "R":
+            registers[z] = 1
+
+    if instruction_ob.name == ["DADDI","BE","BNE"]:
+        x = int(instruction_ob.dest[1:])
+        y = int(instruction_ob.s1[1:])
+        if instruction_ob.dest[0] == "F":
+            fp_registers[x] = 1
+        if instruction_ob.dest[0] == "R":
+            registers[x] = 1
+        if instruction_ob.s1[0] == "F":
+            fp_registers[y] = 1
+        if instruction_ob.s1[0] == "R":
+            registers[y] = 1
+
+    if instruction_ob.name == ["ADD.D","MUL.D","SUB.D","DIV.D","DSUB"]:
+        x= int(instruction_ob.dest[1:])
+        y = int(instruction_ob.dest[1:])
+        z = int(instruction_ob.dest[1:])
+        if instruction_ob.dest[0] == "F":
+            fp_registers[x] = 1
+        if instruction_ob.dest[0] == "R":
+            registers[x] = 1
+        if instruction_ob.s1[0] == "F":
+            fp_registers[y] = 1
+        if instruction_ob.s1[0] == "R":
+            registers[y] = 1
+        if instruction_ob.s2[0] == "F":
+            fp_registers[z] = 1
+        if instruction_ob.s2[0] == "R":
+            registers[z] = 1
+
+
+
+
+def make_free(instruction_ob):
+    x = 0
+    y = 0
+    z = 0
+    if instruction_ob.name == "L.D":
+        x = int(instruction_ob.dest[1:])
+        z = int(instruction_ob.s2[1:])
+        if instruction_ob.dest[0] == "F":
+            fp_registers[x] = 0
+        if instruction_ob.dest[0] == "R":
+            registers[x] = 0
+        if instruction_ob.s2[0] == "F":
+            fp_registers[z] = 0
+        if instruction_ob.s2[0] == "R":
+            registers[z] = 0
+
+    if instruction_ob.name == ["DADDI", "BE", "BNE"]:
+        x = int(instruction_ob.dest[1:])
+        y = int(instruction_ob.s1[1:])
+        if instruction_ob.dest[0] == "F":
+            fp_registers[x] = 0
+        if instruction_ob.dest[0] == "R":
+            registers[x] = 0
+        if instruction_ob.s1[0] == "F":
+            fp_registers[y] = 0
+        if instruction_ob.s1[0] == "R":
+            registers[y] = 0
+
+    if instruction_ob.name == ["ADD.D", "MUL.D", "SUB.D", "DIV.D", "DSUB"]:
+        x = int(instruction_ob.dest[1:])
+        y = int(instruction_ob.dest[1:])
+        z = int(instruction_ob.dest[1:])
+        if instruction_ob.dest[0] == "F":
+            fp_registers[x] = 0
+        if instruction_ob.dest[0] == "R":
+            registers[x] = 0
+        if instruction_ob.s1[0] == "F":
+            fp_registers[y] = 0
+        if instruction_ob.s1[0] == "R":
+            registers[y] = 0
+        if instruction_ob.s2[0] == "F":
+            fp_registers[z] = 0
+        if instruction_ob.s2[0] == "R":
+            registers[z] = 0
+
 
 for i in range(40):
     for j in range(len(instruction_ob)):
@@ -135,17 +291,21 @@ for i in range(40):
         else:
             if instruction_ob[j].IF_complete is False and (operands[0] is False):
                 if instruction_ob[j-1].ID > 0:
-                    operands[0]=True
+                    operands[0] = True
                     instruction_ob[j].IF = count
                     instruction_ob[j].IF_complete=True
                     continue
 
         #ID stage
-        if instruction_ob[j].IF > 0 and (operands[1] is False) and (instruction_ob[j].ID_complete is False):
-            operands[1] = True
-            instruction_ob[j].ID = count
-            instruction_ob[j].ID_complete = True
-            continue
+
+        x = hazard(instruction_ob[j])
+        if x == 0:
+            if instruction_ob[j].IF > 0 and (operands[1] is False) and (instruction_ob[j].ID_complete is False):
+                    operands[1] = True
+                    instruction_ob[j].ID = count
+                    instruction_ob[j].ID_complete = True
+                    make_busy(instruction_ob[j])
+                    continue
 
 
         #EXE stage
@@ -191,7 +351,7 @@ for i in range(40):
         #MUL
         if instruction_ob[j].name == "MUL.D":
             if instruction_ob[j].ID > 0 and (operands[5] is False) and (instruction_ob[j].EXE_complete is False) or (instruction_ob[j].ID > 0 and (mul_pass[j] == 1) and (instruction_ob[j].EXE_complete is False)):
-                if exe_in_mul>fp_mul:
+                if exe_in_mul > fp_mul:
                     exe_in_mul = fp_mul
                 if exe_in_mul > 1:
                     operands[5] = True
@@ -223,13 +383,14 @@ for i in range(40):
             operands[7] = True
             instruction_ob[j].WB = count
             instruction_ob[j].WB_complete = True
+            make_free(instruction_ob[j])
             continue
 
 
     count += 1
-    if(exe_in_mul>0):
+    if exe_in_mul > 0:
         exe_in_mul -= 1
-    if exe_in_add>0:
+    if exe_in_add > 0:
         exe_in_add -= 1
     if exe_in_ld > 0:
         exe_in_ld-=1
