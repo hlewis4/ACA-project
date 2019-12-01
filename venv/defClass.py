@@ -16,3 +16,10 @@ class instructionClass:
         self.WB_complete = False
         self.IU_complete = False
         self.MEM_complete =False
+        self.ADD_complete =False
+        self.MUl_complete=False
+        self.DIV_complete=False
+        self.RAW = "N"
+        self.WAW = "N"
+        self.STRUCT = "N"
+        
