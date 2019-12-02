@@ -10,6 +10,11 @@ with open(r"C:\Users\hashi\Desktop\ACA\ACA project\inst.txt") as f:
 print("Instructions")
 print(lines)
 
+for i in range(len(lines)):
+    lines[i] = lines[i].lstrip()
+    print(lines[i])
+
+
 inst = []
 for x in range(len(lines)):
     inst.append(lines[x].split(' '))
@@ -17,11 +22,18 @@ for x in range(len(lines)):
 for i in range(len(inst)):
     inst[i] = [item.replace(",", "") for item in inst[i]]
 
+
 for i in range(len(inst)):
     inst[i] = [item.replace(":", "") for item in inst[i]]
 print("inst  ",inst)
 
-elements=[]
+for i in range(len(inst)):
+    while '' in inst[i]:
+        inst[i].remove('')
+print("inst", inst)
+
+#UNROLLING INFO
+elements = []
 elements = ["BNE","BEQ","J"]
 unrolling_info = []
 for elem in elements:
@@ -33,6 +45,7 @@ for elem in elements:
             unrolling_info.append(items[3])
 print("res", unrolling_info)
 
+
 for i in range(len(inst)):
     if inst[i][0] == unrolling_info[3]:
         unrolling_info.append(int(i))
@@ -41,15 +54,20 @@ for i in range(len(inst)):
 print("res", unrolling_info)
 
 
+#INSTRUCTIONS
 instruction = []
 for i in range(len(inst)):  # create a list with nested lists
     instruction.append([])
     for j in range(len(inst[i])):
-        if j == 2 and len(inst[i][j]) == 5:
-            instruction[i].append(inst[i][j][0])
-            instruction[i].append(inst[i][j][2:4])
-        else:
-            instruction[i].append(inst[i][j])
+            if j == 2 and len(inst[i][j]) >= 5:
+                v = inst[i][j].split("(")[0]
+                w = inst[i][j].split("(")[1]
+                w = w.replace(")","")
+                print("w ", w)
+                instruction[i].append(v)
+                instruction[i].append(w)
+            else:
+                instruction[i].append(inst[i][j])
 
 print("instructions:")
 print(instruction)
@@ -81,13 +99,19 @@ for i in instruction:
         s2 = 0
 
     instruction_ob.append(instClass(i[0], dest, s1, s2))
-
+inc = 0
+for u in instruction_ob:
+    u.word_address = inc
+    inc+=1
+for i in instruction_ob:
+    print(i.name,i.dest,i.s1,i.s2)
+#INSTRUCTION OBJECTS COPY
 instruction_ob_copy = []
 instruction_ob_copy = copy.deepcopy(instruction_ob)
 
 
-import copy
 
+#READ CONFIG FILE
 with open(r"C:\Users\hashi\Desktop\ACA\ACA project\config.txt") as f:
     config = f.read().splitlines()
 print("Config file")
@@ -136,6 +160,7 @@ for i in cycles:
 
 # PIPELINE LOGIC STARTS
 
+#operands = [IF, ID , IU, MEM , ADD, MUL, DIV, WB]
 operands = [False, False, False, False, False, False, False, False]
 exe_in_ld = 10000
 exe_in_add = 1000
@@ -163,7 +188,7 @@ def hazard(instruction_ob):
     x = 0
     y = 0
     z = 0
-    if instruction_ob.name == "L.D":
+    if instruction_ob.name in ["L.D","LW","S.D","SW"]:
         x = int(instruction_ob.dest[1:])
         z = int(instruction_ob.s2[1:])
 
@@ -202,7 +227,7 @@ def hazard(instruction_ob):
             else:
                 return 1
 
-    if instruction_ob.name in ["DADDI", "BE", "BNE"]:
+    if instruction_ob.name in ["DADDI", "BE", "BNE","DSUBI", "ANDI","ORI"]:
         x = int(instruction_ob.dest[1:])
         y = int(instruction_ob.s1[1:])
 
@@ -224,7 +249,7 @@ def hazard(instruction_ob):
             else:
                 return 1
 
-    if instruction_ob.name in ["ADD.D", "SUB.D", "MUL.D", "DIV.D", "DSUB"]:
+    if instruction_ob.name in ["ADD.D", "SUB.D", "MUL.D", "DIV.D", "DSUB","DADD","AND","OR"]:
         x = int(instruction_ob.dest[1:])
         y = int(instruction_ob.s1[1:])
         z = int(instruction_ob.s2[1:])
@@ -260,7 +285,7 @@ def make_busy(instruction_ob):
     x = 0
     y = 0
     z = 0
-    if instruction_ob.name == "L.D":
+    if instruction_ob.name in ["L.D","S.D","LW","SW"]:
         x = int(instruction_ob.dest[1:])
         z = int(instruction_ob.s2[1:])
         if instruction_ob.dest[0] == "F":
@@ -272,7 +297,7 @@ def make_busy(instruction_ob):
         if instruction_ob.s2[0] == "R":
             registers[z] = 1
 
-    if instruction_ob.name == ["DADDI", "BE", "BNE"]:
+    if instruction_ob.name in ["DADDI", "BE", "BNE","DSUBI","ANDI","ORI"]:
         x = int(instruction_ob.dest[1:])
         y = int(instruction_ob.s1[1:])
         if instruction_ob.dest[0] == "F":
@@ -284,7 +309,7 @@ def make_busy(instruction_ob):
         if instruction_ob.s1[0] == "R":
             registers[y] = 1
 
-    if instruction_ob.name in ["ADD.D", "MUL.D", "SUB.D", "DIV.D", "DSUB"]:
+    if instruction_ob.name in ["ADD.D", "MUL.D", "SUB.D", "DIV.D", "DSUB","DADD","AND","OR"]:
         x = int(instruction_ob.dest[1:])
         y = int(instruction_ob.s1[1:])
         z = int(instruction_ob.s2[1:])
@@ -306,7 +331,7 @@ def make_free(instruction_ob):
     x = 0
     y = 0
     z = 0
-    if instruction_ob.name == "L.D":
+    if instruction_ob.name in ["L.D","S.D","LW","SW"]:
         x = int(instruction_ob.dest[1:])
         z = int(instruction_ob.s2[1:])
         if instruction_ob.dest[0] == "F":
@@ -318,7 +343,7 @@ def make_free(instruction_ob):
         if instruction_ob.s2[0] == "R":
             registers[z] = 0
 
-    if instruction_ob.name == ["DADDI", "BE", "BNE"]:
+    if instruction_ob.name in ["DADDI", "BE", "BNE","DSUBI","ANDI","ORI"]:
         x = int(instruction_ob.dest[1:])
         y = int(instruction_ob.s1[1:])
         if instruction_ob.dest[0] == "F":
@@ -330,7 +355,7 @@ def make_free(instruction_ob):
         if instruction_ob.s1[0] == "R":
             registers[y] = 0
 
-    if instruction_ob.name in ["ADD.D", "MUL.D", "SUB.D", "DIV.D", "DSUB"]:
+    if instruction_ob.name in ["ADD.D", "MUL.D", "SUB.D", "DIV.D", "DSUB","DADD","AND","OR"]:
         x = int(instruction_ob.dest[1:])
         y = int(instruction_ob.s1[1:])
         z = int(instruction_ob.s2[1:])
@@ -347,6 +372,9 @@ def make_free(instruction_ob):
         if instruction_ob.s2[0] == "R":
             registers[z] = 0
 
+#I-CACHE
+
+block = {value: [] for value in range(4)}
 
 for e in range(len(instruction_ob)):
     if instruction_ob[e].name == unrolling_info[0]:
@@ -358,6 +386,10 @@ for e in range(len(instruction_ob)):
 print("v1 ",compare_value1)
 print("v2 ",compare_value2)
 
+block_address = 0
+hit = 0
+miss = 0
+access_number = 0
 for i in range(1000):
     for j in range(len(instruction_ob)):
 
@@ -367,6 +399,21 @@ for i in range(1000):
             operands[0] = True
             flag_if = 1
             instruction_ob[j].IF_complete = True
+            #icache
+            block_address = int((instruction_ob[j].word_address/4) % 4)
+            if (instruction_ob[j].word_address in block[block_address]):
+                hit += 1
+                access_number += 1
+            else:
+                miss +=1
+                access_number +=1
+                block.update({block_address: []})
+                t_list = []
+                t_list.clear()
+                for kk in range(j, j + 4):
+                    if kk < len(instruction_ob):
+                       t_list.append(instruction_ob[kk].word_address)
+                block.update({block_address: t_list})
             continue
         else:
             if instruction_ob[j].IF_complete is False and (operands[0] is False):
@@ -374,6 +421,22 @@ for i in range(1000):
                     operands[0] = True
                     instruction_ob[j].IF = count
                     instruction_ob[j].IF_complete = True
+                    # icache
+                    block_address = int((instruction_ob[j].word_address / 4) % 4)
+                    if (block_address in block and instruction_ob[j].word_address in block[block_address]) is True:
+                        hit += 1
+                        access_number += 1
+                    if (block_address in block and instruction_ob[j].word_address in block[block_address]) is False:
+                        miss += 1
+                        access_number +=1
+                        block.update({block_address: []})
+                        t_list = []
+                        t_list.clear()
+                        for kk in range(j, j + 4):
+                            if kk < len(instruction_ob):
+                                t_list.append(instruction_ob[kk].word_address)
+                        block.update({block_address: t_list})
+
                     continue
 
         # ID stage
@@ -409,14 +472,14 @@ for i in range(1000):
                                 mul_pass.append(fp_mul)
                                 div_pass.append(fp_divide)
                                 ld_pass.append(0)
-
+                                make_free(instruction_ob[j])
                     continue
             if x == 1:
                 operands[0] = True
                 instruction_ob[j].ID = count
                 if instruction_ob[j].dest != 0:
                     for k in range(j):
-                        if instruction_ob[j].name != "L.D":
+                        if not instruction_ob[j].name in ["L.D","LW","S.D","SW","J"]:
                             g1 = int(instruction_ob[j].s1[1:])
                             o1 = instruction_ob[j].s1[0]
                             if o1 == "R":
@@ -425,7 +488,7 @@ for i in range(1000):
                             if o1 == "F":
                                 if fp_registers[g1] == 1 and instruction_ob[k].dest == instruction_ob[j].s1:
                                     instruction_ob[j].RAW = "Y"
-                        if not instruction_ob[j].name in ["DADDI", "BE", "BNE", "HLT"]:
+                        if not instruction_ob[j].name in ["DADDI", "BE", "BNE", "HLT","DSUBI","ANDI","OR","J"]:
                             g2 = int(instruction_ob[j].s2[1:])
                             o2 = instruction_ob[j].s2[0]
                             if o2 == "R":
@@ -436,7 +499,7 @@ for i in range(1000):
                                     instruction_ob[j].RAW = "Y"
 
 
-                    if not instruction_ob[k].name in ["HLT","BNE","BE"]:
+                    if not instruction_ob[k].name in ["HLT","BNE","BE","J"]:
                         for k in range(j):
                             g3 = int(instruction_ob[j].dest[1:])
                             o3 = instruction_ob[j].dest[0]
@@ -462,7 +525,7 @@ for i in range(1000):
 
         # EXE stage
         # IU cycle.
-        if instruction_ob[j].name in ["L.D", "DADDI", "DSUB"]:
+        if instruction_ob[j].name in ["L.D", "DADDI", "DSUB","DADD","DSUBI","S.D","LW","SW"]:
             if instruction_ob[j].ID > 0 and (operands[2] is False) and (instruction_ob[j].IU_complete is False):
                 operands[2] = True
                 flag_iu = 1
@@ -473,10 +536,14 @@ for i in range(1000):
                     compare_value1 = compare_value1 - compare_value2
                     print("compare1 ",compare_value1)
                     print("compare2 ",compare_value2)
+                if instruction_ob[j].name == "DSUBI":
+                    compare_value1 = compare_value1 - 1
+                    print("compare1 ",compare_value1)
+                    print("compare2 ",compare_value2)
                 continue
 
         # MEM stage
-        if instruction_ob[j].name == "L.D":
+        if instruction_ob[j].name in ["L.D","LW","S.D","SW"]:
             if (instruction_ob[j].IU > 0 and (operands[3] is False) and (instruction_ob[j].EXE_complete is False)) or (
                     instruction_ob[j].IU > 0 and ld_pass[j] == 1 and (instruction_ob[j].MEM_complete is False)):
                 if exe_in_ld > mem:
@@ -502,7 +569,7 @@ for i in range(1000):
                     flag_iu = 0
                     instruction_ob[j].IU = count
 
-        if instruction_ob[j].name in ["DSUB", "DADDI"]:
+        if instruction_ob[j].name in ["DSUB", "DADDI","DSUBI","DADD"]:
             if instruction_ob[j].IU > 0 and (operands[3] is False) and (instruction_ob[j].EXE_complete is False):
                 operands[3] = True
                 instruction_ob[j].EXE = count
@@ -519,7 +586,7 @@ for i in range(1000):
                     continue
 
         # ADD
-        if instruction_ob[j].name == "ADD.D" or instruction_ob[j].name == "SUB.D":
+        if instruction_ob[j].name in ["ADD.D","SUB.D"]:
             if add_pipeline is False:
                 if instruction_ob[j].ID > 0 and (operands[4] is False) and (
                         instruction_ob[j].EXE_complete is False) or (
@@ -601,20 +668,35 @@ for i in range(1000):
 
         # DIV
         if instruction_ob[j].name == "DIV.D":
-            if instruction_ob[j].ID > 0 and (operands[6] is False) and (instruction_ob[j].EXE_complete is False) or \
-                    instruction_ob[j].ID > 0 and (div_pass[j] == 1) and (instruction_ob[j].EXE_complete is False):
-                if exe_in_div > fp_divide:
-                    exe_in_div = fp_divide
-                if exe_in_div > 1:
-                    operands[6] = True
-                    div_pass[j] = 1
-                    continue
-                else:
-                    flag_div = 1
-                    instruction_ob[j].EXE = count
-                    instruction_ob[j].EXE_complete = True
-                    exe_in_div = 1000
-                    continue
+            if div_pipeline is False:
+                if instruction_ob[j].ID > 0 and (operands[6] is False) and (instruction_ob[j].EXE_complete is False) or \
+                        instruction_ob[j].ID > 0 and (div_pass[j] == 1) and (instruction_ob[j].EXE_complete is False):
+                    if exe_in_div > fp_divide:
+                        exe_in_div = fp_divide
+                    if exe_in_div > 1:
+                        operands[6] = True
+                        div_pass[j] = 1
+                        continue
+                    else:
+                        flag_div = 1
+                        instruction_ob[j].EXE = count
+                        instruction_ob[j].EXE_complete = True
+                        exe_in_div = 1000
+                        continue
+            if div_pipeline is True:
+                if (instruction_ob[j].ID > 0 and (operands[6] is False) and (
+                        instruction_ob[j].EXE_complete is False)) or (
+                        instruction_ob[j].ID > 0 and (div_pass[j] <= fp_divide) and (
+                        instruction_ob[j].EXE_complete is False)):
+                    if div_pass[j] > 1:
+                        operands[6] = True
+                        instruction_ob[j].EXE = count
+                        div_pass[j] -= 1
+                        continue
+                    else:
+                        instruction_ob[j].EXE_complete = True
+                        instruction_ob[j].EXE = count
+                        continue
 
         # WriteBack
         if (instruction_ob[j].EXE_complete is True) and (operands[7] is False) and (
@@ -661,10 +743,15 @@ for i in range(1000):
             operands[5] = False
             flag_mul = 0
     if mul_pipeline is True:
-        operands[4] = False
-    if flag_div == 1:
+        operands[5] = False
+
+    if div_pipeline is False:
+        if flag_div == 1:
+            operands[6] = False
+            flag_div = 0
+    if div_pipeline is True:
         operands[6] = False
-        flag_div = 0
+
     operands[7] = False
 
 print("IF    ID     EXE     MEM    RAW    WAW     STRUCT")
@@ -680,3 +767,7 @@ for instruction_obj in instruction_ob:
     temp_list.append(instruction_obj.STRUCT)
     print(temp_list)
 
+print("access numbers ", access_number)
+print("misses", miss)
+print("hits ", hit)
+print(block)

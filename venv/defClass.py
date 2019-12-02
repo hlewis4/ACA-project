@@ -22,4 +22,5 @@ class instructionClass:
         self.RAW = "N"
         self.WAW = "N"
         self.STRUCT = "N"
+        self.word_address = 0
         
