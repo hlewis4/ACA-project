@@ -132,6 +132,8 @@ add_pipeline = False
 mul_pipeline = False
 div_pipeline = False
 mem = 0
+icache = 0
+dcache = 0
 
 for i in cycles:
     if "adder:" in i:
@@ -157,7 +159,10 @@ for i in cycles:
 
     if "memory:" in i:
         mem = int(i[2])
-
+    if "I-Cache:" in i:
+        icache = int(i[1])
+    if "D-Cache:" in i:
+        dcache = int(i[1])
 # PIPELINE LOGIC STARTS
 
 #operands = [IF, ID , IU, MEM , ADD, MUL, DIV, WB]
@@ -390,52 +395,86 @@ block_address = 0
 hit = 0
 miss = 0
 access_number = 0
+if_pass = [0] * len(instruction_ob)
+if_cycles = 1000
 for i in range(1000):
     for j in range(len(instruction_ob)):
 
         # IF stage
-        if i == 0 and not operands[0]:
-            instruction_ob[j].IF = count
-            operands[0] = True
-            flag_if = 1
-            instruction_ob[j].IF_complete = True
+        if (j == 0 and (operands[0] is False) and (instruction_ob[j].IF_complete is False)) or (j == 0 and (operands[0] is True) and if_pass[j] == 1):
+
             #icache
             block_address = int((instruction_ob[j].word_address/4) % 4)
-            if (instruction_ob[j].word_address in block[block_address]):
-                hit += 1
-                access_number += 1
+            if (instruction_ob[j].word_address in block[block_address] and if_pass[j] == 0):
+                    hit += 1
+                    access_number += 1
+                    flag_if = 1
+                    instruction_ob[j].IF = count
+                    operands[0] = True
+                    instruction_ob[j].IF_complete = True
+                    instruction_ob[j].IF = count
+
             else:
-                miss +=1
-                access_number +=1
-                block.update({block_address: []})
-                t_list = []
-                t_list.clear()
-                for kk in range(j, j + 4):
-                    if kk < len(instruction_ob):
-                       t_list.append(instruction_ob[kk].word_address)
-                block.update({block_address: t_list})
+                if if_pass[j] == 0:
+                    miss +=1
+                    access_number +=1
+                    block.update({block_address: []})
+                    t_list = []
+                    t_list.clear()
+                    for kk in range(j, j + 4):
+                        if kk < len(instruction_ob):
+                           t_list.append(instruction_ob[kk].word_address)
+                    block.update({block_address: t_list})
+                if if_cycles > 2*(mem + icache):
+                    if_cycles = 2 * (mem + icache)
+                if if_cycles > 1:
+                    instruction_ob[j].IF = count
+                    operands[0] = True
+                    if_pass[j] = 1
+
+                if if_cycles == 1:
+                    instruction_ob[j].IF_complete = True
+                    instruction_ob[j].IF = count
+                    if_pass[j] = 0
+                    flag = 1
+                    if_cycles = 1000
             continue
         else:
-            if instruction_ob[j].IF_complete is False and (operands[0] is False):
+            if (instruction_ob[j].IF_complete is False and (operands[0] is False)) or((instruction_ob[j].IF_complete is False) and (operands[0] is True) and if_pass[j] ==1 ):
                 if instruction_ob[j - 1].ID > 0:
-                    operands[0] = True
-                    instruction_ob[j].IF = count
-                    instruction_ob[j].IF_complete = True
                     # icache
                     block_address = int((instruction_ob[j].word_address / 4) % 4)
-                    if (block_address in block and instruction_ob[j].word_address in block[block_address]) is True:
+                    if (instruction_ob[j].word_address in block[block_address] and if_pass[j] == 0):
                         hit += 1
                         access_number += 1
-                    if (block_address in block and instruction_ob[j].word_address in block[block_address]) is False:
-                        miss += 1
-                        access_number +=1
-                        block.update({block_address: []})
-                        t_list = []
-                        t_list.clear()
-                        for kk in range(j, j + 4):
-                            if kk < len(instruction_ob):
-                                t_list.append(instruction_ob[kk].word_address)
-                        block.update({block_address: t_list})
+                        flag_if = 1
+                        operands[0] = True
+                        instruction_ob[j].IF_complete = True
+                        instruction_ob[j].IF = count
+                    else:
+                        if if_pass[j] == 0:
+                            miss += 1
+                            access_number += 1
+                            block.update({block_address: []})
+                            t_list = []
+                            t_list.clear()
+                            for kk in range(j, j + 4):
+                                if kk < len(instruction_ob):
+                                    t_list.append(instruction_ob[kk].word_address)
+                            block.update({block_address: t_list})
+                        if if_cycles > 2 * (mem + icache):
+                            if_cycles = 2 * (mem + icache)
+                        if if_cycles > 1:
+                            instruction_ob[j].IF = count
+                            operands[0] = True
+                            if_pass[j] = 1
+
+                        if if_cycles == 1:
+                            instruction_ob[j].IF_complete = True
+                            instruction_ob[j].IF = count
+                            if_pass[j] = 0
+                            flag = 1
+                            if_cycles = 1000
 
                     continue
 
@@ -463,6 +502,7 @@ for i in range(1000):
                             ld_pass = ld_pass[:-1]
                             mul_pass = mul_pass[:-1]
                             div_pass = div_pass[:-1]
+                            if_pass = if_pass[:-1]
 
                             for dd in instruction_ob_copy:
                                 instruction_ob.append(dd)
@@ -472,6 +512,7 @@ for i in range(1000):
                                 mul_pass.append(fp_mul)
                                 div_pass.append(fp_divide)
                                 ld_pass.append(0)
+                                if_pass.append(0)
                                 make_free(instruction_ob[j])
                     continue
             if x == 1:
@@ -721,6 +762,8 @@ for i in range(1000):
             exe_in_add -= 1
     if exe_in_ld > 0:
         exe_in_ld -= 1
+    if if_cycles > 0:
+        if_cycles -= 1
     if flag_if == 1:
         operands[0] = False
         flag_if = 0
