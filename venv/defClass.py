@@ -23,4 +23,5 @@ class instructionClass:
         self.WAW = "N"
         self.STRUCT = "N"
         self.word_address = 0
+        self.dest_data = 0
         

@@ -3,10 +3,15 @@ import copy
 
 with open(r"C:\Users\hashi\Desktop\ACA\ACA project\reg.txt") as reg:
     reg_lines = reg.read().splitlines()
-print(reg_lines)
+print("reg_lines",reg_lines)
+
+with open(r"C:\Users\hashi\Desktop\ACA\ACA project\data.txt") as data_v:
+    data_lines = data_v.read().splitlines()
+print("data lines", data_lines)
 
 with open(r"C:\Users\hashi\Desktop\ACA\ACA project\inst.txt") as f:
     lines = f.read().splitlines()
+
 print("Instructions")
 print(lines)
 
@@ -53,6 +58,17 @@ for i in range(len(inst)):
 
 print("res", unrolling_info)
 
+#integer values of register data in list
+register_data = []
+for item in reg_lines:
+    register_data.append(int(item,2))
+print("register data",register_data)
+
+#integer values for data.txt
+data_values = []
+for item in data_lines:
+    data_values.append(int(item,2))
+print("data values",data_values)
 
 #INSTRUCTIONS
 instruction = []
@@ -89,7 +105,7 @@ for i in instruction:
         else:
             s1 = i[2]
         if len(i[3]) == 1:
-            s2 = len(i[3])
+            s2 = int(i[3])
         else:
             s2 = i[3]
 
@@ -377,9 +393,173 @@ def make_free(instruction_ob):
         if instruction_ob.s2[0] == "R":
             registers[z] = 0
 
+def calculate_destination(instruction_ob):
+    if instruction_ob.name == "DADDI":
+        x = int(instruction_ob.dest[1:])
+        y = int(instruction_ob.s1[1:])
+        register_data[x] = register_data[y] + int(instruction_ob.s2)
+        instruction_ob.dest_data = register_data[x]
+        print("register data y and s2", register_data[y], int(instruction_ob.s2))
+        print("DADDI ",instruction_ob.dest_data)
+
+    if instruction_ob.name == "DSUBI":
+        x = int(instruction_ob.dest[1:])
+        y = int(instruction_ob.s1[1:])
+        register_data[x] = register_data[y] - int(instruction_ob.s2)
+        instruction_ob.dest_data = register_data[x]
+
+    if instruction_ob.name == "DSUB":
+        x = int(instruction_ob.dest[1:])
+        y = int(instruction_ob.s1[1:])
+        z = int(instruction_ob.s2[1:])
+        register_data[x] = register_data[y] - register_data[z]
+        instruction_ob.dest_data = register_data[x]
+
+    if instruction_ob.name == "DADD":
+        x = int(instruction_ob.dest[1:])
+        y = int(instruction_ob.s1[1:])
+        z = int(instruction_ob.s2[1:])
+        register_data[x] = register_data[y] + register_data[z]
+        instruction_ob.dest_data = register_data[x]
+
+
 #I-CACHE
+block_address = 0
+i_hit = 0
+d_hit = 0
+i_miss = 0
+d_miss = 0
+i_access_number = 0
+d_access_number = 0
+if_pass = [0] * len(instruction_ob)
+if_cycles = 1000
+d_block_0 = {d_value_0: [] for d_value_0 in range(2)}
+lru_0 = 0
+lru_1 = 0
+d_block_1 = {d_value_1: [] for d_value_1 in range(2)}
+
+print("register data",register_data)
+
+def data_cache(instruction_ob):
+    set_address = 0
+    v = 0
+    next =0
+    block_start_number = 0
+    global d_hit
+    global d_access_number
+    global d_miss
+    global lru_0, lru_1
+
+
+    if instruction_ob.name in ["LW","SW"]:
+        z = int(instruction_ob.s2[1:])
+        instruction_ob.dest_data = int(instruction_ob.s1) + register_data[z]
+        set_address = int(instruction_ob.dest_data/16) % 2
+        if set_address == 0:
+            for ff in len(d_block_0):
+                if instruction_ob.dest_data in d_block_0[ff]:
+                    next = 1
+                    v = ff
+                    d_hit += 1
+                    d_access_number +=1
+                    lru_0 = int(not(v))
+            if next == 1:
+                return dcache
+            if next == 0:
+                d_miss += 1
+                d_access_number += 1
+                block_start_number = int(instruction_ob.dest_data/16) * 16
+                d_block_0.update({lru_0: []})
+                d_block_0[lru_0].append(block_start_number)
+                d_block_0[lru_0].append(block_start_number+4)
+                d_block_0[lru_0].append(block_start_number+8)
+                d_block_0[lru_0].append(block_start_number+12)
+                lru_0 = int(not(lru_0))
+                return 2 * (mem + dcache)
+
+        if set_address == 1:
+            for ff in len(d_block_1):
+                if instruction_ob.dest_data in d_block_1[ff]:
+                    next = 1
+                    v = ff
+                    d_hit += 1
+                    d_access_number +=1
+                    lru_1 = int(not(v))
+            if next == 1:
+                return dcache
+            if next == 0:
+                d_miss +=1
+                d_access_number +=1
+                block_start_number = int(instruction_ob.dest_data/16) * 16
+                d_block_1.update({lru_1: []})
+                d_block_1[lru_1].append(block_start_number)
+                d_block_1[lru_1].append(block_start_number+4)
+                d_block_1[lru_1].append(block_start_number+8)
+                d_block_1[lru_1].append(block_start_number+12)
+                lru_1 = int(not(lru_1))
+                return 2*(mem+dcache)
+    if instruction_ob.name in ["L.D","S.D"]:
+        double_list = []
+        cycles_for_execution = 0
+        z = int(instruction_ob.s2[1:])
+        instruction_ob.dest_data = int(instruction_ob.s1) + register_data[z]
+        double_list.append(instruction_ob.dest_data)
+        double_list.append(instruction_ob.dest_data+4)
+        print("double list",double_list)
+        for item in double_list:
+            set_address = 0
+            v = 0
+            next = 0
+            set_address = int(item/ 16) % 2
+            if set_address == 0:
+                for ff in range(len(d_block_0)):
+                    if item in d_block_0[ff]:
+                        next = 1
+                        v = ff
+                        d_hit += 1
+                        d_access_number += 1
+                        lru_0 = int(not(v))
+                if next == 1:
+                    cycles_for_execution = cycles_for_execution + dcache
+                if next == 0:
+                    d_miss += 1
+                    d_access_number += 1
+                    block_start_number = int(item/ 16) * 16
+                    d_block_0.update({lru_0: []})
+                    d_block_0[lru_0].append(block_start_number)
+                    d_block_0[lru_0].append(block_start_number + 4)
+                    d_block_0[lru_0].append(block_start_number + 8)
+                    d_block_0[lru_0].append(block_start_number + 12)
+                    lru_0 = int(not(lru_0))
+                    cycles_for_execution = cycles_for_execution + (2 * (mem + dcache))
+
+            if set_address == 1:
+                for gg in range(len(d_block_1)):
+                    if item in d_block_1[gg]:
+                        next = 1
+                        v = gg
+                        d_hit += 1
+                        d_access_number += 1
+                        lru_1 = int(not(v))
+                if next == 1:
+                    cycles_for_execution = cycles_for_execution + dcache
+                if next == 0:
+                    d_miss += 1
+                    d_access_number += 1
+                    block_start_number = int(item / 16) * 16
+                    d_block_1.update({lru_1: []})
+                    d_block_1[lru_1].append(block_start_number)
+                    d_block_1[lru_1].append(block_start_number + 4)
+                    d_block_1[lru_1].append(block_start_number + 8)
+                    d_block_1[lru_1].append(block_start_number + 12)
+                    lru_1 = int(not(lru_1))
+                    cycles_for_execution = cycles_for_execution + (2 * (mem + dcache))
+
+        return cycles_for_execution
+
 
 block = {value: [] for value in range(4)}
+
 
 for e in range(len(instruction_ob)):
     if instruction_ob[e].name == unrolling_info[0]:
@@ -391,12 +571,7 @@ for e in range(len(instruction_ob)):
 print("v1 ",compare_value1)
 print("v2 ",compare_value2)
 
-block_address = 0
-hit = 0
-miss = 0
-access_number = 0
-if_pass = [0] * len(instruction_ob)
-if_cycles = 1000
+cycles_for_dcache = 0
 for i in range(1000):
     for j in range(len(instruction_ob)):
 
@@ -406,8 +581,8 @@ for i in range(1000):
             #icache
             block_address = int((instruction_ob[j].word_address/4) % 4)
             if (instruction_ob[j].word_address in block[block_address] and if_pass[j] == 0):
-                    hit += 1
-                    access_number += 1
+                    i_hit += 1
+                    i_access_number += 1
                     flag_if = 1
                     instruction_ob[j].IF = count
                     operands[0] = True
@@ -416,8 +591,8 @@ for i in range(1000):
 
             else:
                 if if_pass[j] == 0:
-                    miss +=1
-                    access_number +=1
+                    i_miss +=1
+                    i_access_number +=1
                     block.update({block_address: []})
                     t_list = []
                     t_list.clear()
@@ -442,19 +617,19 @@ for i in range(1000):
         else:
             if (instruction_ob[j].IF_complete is False and (operands[0] is False)) or((instruction_ob[j].IF_complete is False) and (operands[0] is True) and if_pass[j] ==1 ):
                 if instruction_ob[j - 1].ID > 0:
-                    # icache
+                    #icache
                     block_address = int((instruction_ob[j].word_address / 4) % 4)
                     if (instruction_ob[j].word_address in block[block_address] and if_pass[j] == 0):
-                        hit += 1
-                        access_number += 1
+                        i_hit += 1
+                        i_access_number += 1
                         flag_if = 1
                         operands[0] = True
                         instruction_ob[j].IF_complete = True
                         instruction_ob[j].IF = count
                     else:
                         if if_pass[j] == 0:
-                            miss += 1
-                            access_number += 1
+                            i_miss += 1
+                            i_access_number += 1
                             block.update({block_address: []})
                             t_list = []
                             t_list.clear()
@@ -573,6 +748,7 @@ for i in range(1000):
                 instruction_ob[j].IU = count
                 instruction_ob[j].EXE = count
                 instruction_ob[j].IU_complete = True
+                calculate_destination(instruction_ob[j])
                 if instruction_ob[j].name == "DSUB":
                     compare_value1 = compare_value1 - compare_value2
                     print("compare1 ",compare_value1)
@@ -587,8 +763,9 @@ for i in range(1000):
         if instruction_ob[j].name in ["L.D","LW","S.D","SW"]:
             if (instruction_ob[j].IU > 0 and (operands[3] is False) and (instruction_ob[j].EXE_complete is False)) or (
                     instruction_ob[j].IU > 0 and ld_pass[j] == 1 and (instruction_ob[j].MEM_complete is False)):
-                if exe_in_ld > mem:
-                    exe_in_ld = mem
+                if exe_in_ld > cycles_for_dcache:
+                    cycles_for_dcache = data_cache(instruction_ob[j])
+                    exe_in_ld = cycles_for_dcache
                 if exe_in_ld > 1:
                     operands[3] = True
                     ld_pass[j] = 1
@@ -796,7 +973,10 @@ for i in range(1000):
         operands[6] = False
 
     operands[7] = False
-
+    if i==54:
+        print("before last LD",register_data)
+    if i == 47:
+        print("DADDI R5",instruction_ob[8].dest_data)
 print("IF    ID     EXE     MEM    RAW    WAW     STRUCT")
 temp_list = []
 for instruction_obj in instruction_ob:
@@ -810,7 +990,12 @@ for instruction_obj in instruction_ob:
     temp_list.append(instruction_obj.STRUCT)
     print(temp_list)
 
-print("access numbers ", access_number)
-print("misses", miss)
-print("hits ", hit)
-print(block)
+print("i access numbers ", i_access_number)
+print("i misses", i_miss)
+print("i hits ", i_hit)
+
+print("d access numbers ", d_access_number)
+print("d misses", d_miss)
+print("d hits ", d_hit)
+print("d block 0",d_block_0)
+print("d block 1 ",d_block_1)
