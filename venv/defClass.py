@@ -25,4 +25,5 @@ class instructionClass:
         self.STRUCT = "N"
         self.word_address = 0
         self.dest_data = 0
+        self.ICACHE_complete = False
         
