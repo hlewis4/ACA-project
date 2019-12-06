@@ -12,6 +12,7 @@ class instructionClass:
         self.IU = 0
         self.IF_complete = False
         self.ID_complete = False
+        self.ID_busy = False
         self.EXE_complete = False
         self.WB_complete = False
         self.IU_complete = False

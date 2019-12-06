@@ -1,16 +1,19 @@
 from defClass import instructionClass as instClass
 import copy
 
-with open(r"C:\Users\hashi\Desktop\ACA\ACA project\reg.txt") as reg:
+with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_3\reg.txt") as reg:
     reg_lines = reg.read().splitlines()
 print("reg_lines",reg_lines)
 
-with open(r"C:\Users\hashi\Desktop\ACA\ACA project\data.txt") as data_v:
+with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_3\data.txt") as data_v:
     data_lines = data_v.read().splitlines()
 print("data lines", data_lines)
 
-with open(r"C:\Users\hashi\Desktop\ACA\ACA project\inst.txt") as f:
+with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_3\inst.txt") as f:
     lines = f.read().splitlines()
+
+print("Instructions")
+print(lines)
 
 print("Instructions")
 print(lines)
@@ -128,7 +131,7 @@ instruction_ob_copy = copy.deepcopy(instruction_ob)
 
 
 #READ CONFIG FILE
-with open(r"C:\Users\hashi\Desktop\ACA\ACA project\config.txt") as f:
+with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_3\config.txt") as f:
     config = f.read().splitlines()
 print("Config file")
 print(config)
@@ -139,8 +142,12 @@ for x in range(len(config)):
 
 for i in range(len(cycles)):
     cycles[i] = [item.replace(",", "") for item in cycles[i]]
-print(cycles)
 
+for i in range(len(cycles)):
+    while '' in cycles[i]:
+        cycles[i].remove('')
+print("cycles")
+print(cycles)
 fp_add = 0
 fp_mul = 0
 fp_divide = 0
@@ -475,7 +482,10 @@ def data_cache(instruction_ob):
                 d_block_0[lru_0].append(block_start_number+8)
                 d_block_0[lru_0].append(block_start_number+12)
                 lru_0 = int(not(lru_0))
-                return 2 * (mem + dcache)
+                if instruction_ob.name == "L.W":
+                    return 2 * (mem + dcache)
+                else:
+                    return 2 * (mem + dcache) + 1
 
         if set_address == 1:
             for ff in len(d_block_1):
@@ -531,7 +541,10 @@ def data_cache(instruction_ob):
                     d_block_0[lru_0].append(block_start_number + 8)
                     d_block_0[lru_0].append(block_start_number + 12)
                     lru_0 = int(not(lru_0))
-                    cycles_for_execution = cycles_for_execution + (2 * (mem + dcache))
+                    if instruction_ob.name =="L.D":
+                        cycles_for_execution = cycles_for_execution + (2 * (mem + dcache))
+                    else:
+                        cycles_for_execution = cycles_for_execution + (2 * (mem + dcache)) + 1
 
             if set_address == 1:
                 for gg in range(len(d_block_1)):
@@ -553,7 +566,10 @@ def data_cache(instruction_ob):
                     d_block_1[lru_1].append(block_start_number + 8)
                     d_block_1[lru_1].append(block_start_number + 12)
                     lru_1 = int(not(lru_1))
-                    cycles_for_execution = cycles_for_execution + (2 * (mem + dcache))
+                    if instruction_ob.name == "L.D":
+                        cycles_for_execution = cycles_for_execution + (2 * (mem + dcache))
+                    else:
+                        cycles_for_execution = cycles_for_execution + (2 * (mem + dcache)) + 1
 
         return cycles_for_execution
 
