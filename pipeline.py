@@ -1,15 +1,15 @@
 from defClass import instructionClass as instClass
 import copy
 
-with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_3\reg.txt") as reg:
+with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_2\reg.txt") as reg:
     reg_lines = reg.read().splitlines()
 print("reg_lines",reg_lines)
 
-with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_3\data.txt") as data_v:
+with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_2\data.txt") as data_v:
     data_lines = data_v.read().splitlines()
 print("data lines", data_lines)
 
-with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_3\inst.txt") as f:
+with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_2\inst.txt") as f:
     lines = f.read().splitlines()
 
 # print("Instructions")
@@ -131,7 +131,7 @@ instruction_ob_copy = copy.deepcopy(instruction_ob)
 
 
 #READ CONFIG FILE
-with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_3\config.txt") as f:
+with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_2\config.txt") as f:
     config = f.read().splitlines()
 print("Config file")
 print(config)
@@ -157,7 +157,7 @@ div_pipeline = False
 mem = 0
 icache = 0
 dcache = 0
-
+memory_bus = 0
 for i in cycles:
     if "adder:" in i:
         fp_add = int(i[2])
@@ -592,7 +592,8 @@ cycles_for_icache = 0
 waiting_for_hazard = [0] * len(instruction_ob)
 iu_pass = [0] * len(instruction_ob)
 id_pass = [0] * len(instruction_ob)
-
+memory_bus_if_pass = 0
+memory_bus_mem_pass = 0
 for i in range(1000):
     for j in range(len(instruction_ob)):
 
@@ -608,6 +609,7 @@ for i in range(1000):
                     cycles_for_icache = icache
                 else:
                     i_miss += 1
+                    memory_bus = 1
                     i_access_number +=1
                     block.update({block_address: []})
                     t_list = []
@@ -629,6 +631,7 @@ for i in range(1000):
             if if_cycles == 0:
                 instruction_ob[j].IF_complete = True
                 instruction_ob[j].ICACHE_complete = True
+                memory_bus = 0
                 instruction_ob[j].IF = count
                 if_pass[j] = 0
                 flag_if = 1
@@ -654,17 +657,37 @@ for i in range(1000):
                                 t_list.append(instruction_ob[kk].word_address)
                         block.update({block_address: t_list})
                         cycles_for_icache = 2 * (mem + icache)
-                if if_cycles > cycles_for_icache:
-                    if_cycles = cycles_for_icache
-                if if_cycles > 0:
-                    if_cycles -= 1
-                if if_cycles >= 0:
-                    operands[0] = True
-                    if_pass[j] = 1
-                if if_cycles == 0:
-                    if_pass[j] = 0
-                    if_cycles = 1000
-                    instruction_ob[j].ICACHE_complete = True
+                if cycles_for_icache == icache:
+                    if if_cycles > cycles_for_icache:
+                        if_cycles = cycles_for_icache
+                    if if_cycles > 0:
+                        if_cycles -= 1
+                    if if_cycles >= 0:
+                        operands[0] = True
+                        if_pass[j] = 1
+                    if if_cycles == 0:
+                        if_pass[j] = 0
+                        if_cycles = 1000
+                        instruction_ob[j].ICACHE_complete = True
+                elif (memory_bus == 0 and cycles_for_icache > icache) or (memory_bus == 1 and memory_bus_if_pass == 1):
+                    if if_cycles > cycles_for_icache:
+                        if_cycles = cycles_for_icache
+                    if if_cycles > 0:
+                        if_cycles -= 1
+                    if if_cycles >= 0:
+                        operands[0] = True
+                        if_pass[j] = 1
+                        memory_bus = 1
+                        memory_bus_if_pass = 1
+                    if if_cycles == 0:
+                        if_pass[j] = 0
+                        if_cycles = 1000
+                        instruction_ob[j].ICACHE_complete = True
+                        memory_bus = 0
+                        memory_bus_if_pass = 0
+                else:
+                    if_pass[j]==1
+                    continue
                 if (instruction_ob[j].ICACHE_complete is True) and (instruction_ob[j-1].ID_complete is True):
                     instruction_ob[j].IF_complete = True
                     instruction_ob[j].IF = count
@@ -805,19 +828,49 @@ for i in range(1000):
                 if exe_in_ld > cycles_for_dcache:
                     cycles_for_dcache = data_cache(instruction_ob[j])
                     exe_in_ld = cycles_for_dcache
-                if exe_in_ld > 1:
-                    operands[3] = True
-                    ld_pass[j] = 1
-                    continue
+                if cycles_for_dcache <=2*dcache:
+                    if exe_in_ld > 0:
+                        exe_in_ld -= 1
+                    if exe_in_ld >=1:
+                        operands[3] = True
+                        ld_pass[j] = 1
+
+                        continue
+                    else:
+                        flag_ld = 1
+                        flag_iu = 1
+                        instruction_ob[j].EXE = count
+                        instruction_ob[j].EXE_complete = True
+                        instruction_ob[j].MEM_complete = True
+                        exe_in_ld = 10000
+                        ld_pass[j] = 0
+                        continue
+
+                elif (memory_bus == 0 and cycles_for_dcache > 2 * dcache) or(memory_bus == 1 and memory_bus_mem_pass == 1):
+                    if exe_in_ld > 0:
+                        exe_in_ld -= 1
+                    if exe_in_ld >= 1:
+                        operands[3] = True
+                        memory_bus = 1
+                        memory_bus_mem_pass = 1
+                        ld_pass[j] = 1
+                        continue
+                    else:
+                        flag_ld = 1
+                        flag_iu = 1
+                        instruction_ob[j].EXE = count
+                        instruction_ob[j].EXE_complete = True
+                        instruction_ob[j].MEM_complete = True
+                        memory_bus = 0
+                        memory_bus_mem_pass = 0
+                        exe_in_ld = 10000
+                        ld_pass[j] = 0
+                        continue
+
                 else:
-                    flag_ld = 1
-                    flag_iu = 1
-                    instruction_ob[j].EXE = count
-                    instruction_ob[j].EXE_complete = True
-                    instruction_ob[j].MEM_complete = True
-                    exe_in_ld = 10000
-                    ld_pass[j] = 0
-                    continue
+                    if memory_bus == 1:
+                        ld_pass[j] = 1
+                        continue
             else:
                 if (instruction_ob[j].MEM_complete is False) and (instruction_ob[j].IU_complete is True) and (
                         operands[3] is True):
@@ -976,8 +1029,7 @@ for i in range(1000):
     if add_pipeline is False:
         if exe_in_add > 0:
             exe_in_add -= 1
-    if exe_in_ld > 0:
-        exe_in_ld -= 1
+
     if flag_iu == 1:
         operands[5] = False
         flag_iu = 0
