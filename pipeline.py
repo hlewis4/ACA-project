@@ -12,15 +12,15 @@ print("data lines", data_lines)
 with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_3\inst.txt") as f:
     lines = f.read().splitlines()
 
-print("Instructions")
-print(lines)
-
-print("Instructions")
-print(lines)
+# print("Instructions")
+# print(lines)
+#
+# print("Instructions")
+# print(lines)
 
 for i in range(len(lines)):
     lines[i] = lines[i].lstrip()
-    print(lines[i])
+    #print(lines[i])
 
 
 inst = []
@@ -33,12 +33,12 @@ for i in range(len(inst)):
 
 for i in range(len(inst)):
     inst[i] = [item.replace(":", "") for item in inst[i]]
-print("inst  ",inst)
+#print("inst  ",inst)
 
 for i in range(len(inst)):
     while '' in inst[i]:
         inst[i].remove('')
-print("inst", inst)
+#print("inst", inst)
 
 #UNROLLING INFO
 elements = []
@@ -51,7 +51,7 @@ for elem in elements:
             unrolling_info.append(items[1])
             unrolling_info.append(items[2])
             unrolling_info.append(items[3])
-print("res", unrolling_info)
+#print("res", unrolling_info)
 
 
 for i in range(len(inst)):
@@ -59,19 +59,19 @@ for i in range(len(inst)):
         unrolling_info.append(int(i))
         inst[i].remove(unrolling_info[3])
 
-print("res", unrolling_info)
+#print("res", unrolling_info)
 
 #integer values of register data in list
 register_data = []
 for item in reg_lines:
     register_data.append(int(item,2))
-print("register data",register_data)
+#print("register data",register_data)
 
 #integer values for data.txt
 data_values = []
 for item in data_lines:
     data_values.append(int(item,2))
-print("data values",data_values)
+#print("data values",data_values)
 
 #INSTRUCTIONS
 instruction = []
@@ -88,8 +88,8 @@ for i in range(len(inst)):  # create a list with nested lists
             else:
                 instruction[i].append(inst[i][j])
 
-print("instructions:")
-print(instruction)
+#print("instructions:")
+#print(instruction)
 
 # assign to objects
 instruction_ob = []
@@ -146,8 +146,8 @@ for i in range(len(cycles)):
 for i in range(len(cycles)):
     while '' in cycles[i]:
         cycles[i].remove('')
-print("cycles")
-print(cycles)
+#print("cycles")
+#print(cycles)
 fp_add = 0
 fp_mul = 0
 fp_divide = 0
@@ -445,7 +445,7 @@ lru_0 = 0
 lru_1 = 0
 d_block_1 = {d_value_1: [] for d_value_1 in range(2)}
 
-print("register data",register_data)
+#print("register data",register_data)
 
 def data_cache(instruction_ob):
     set_address = 0
@@ -515,7 +515,7 @@ def data_cache(instruction_ob):
         instruction_ob.dest_data = int(instruction_ob.s1) + register_data[z]
         double_list.append(instruction_ob.dest_data)
         double_list.append(instruction_ob.dest_data+4)
-        print("double list",double_list)
+        #print("double list",double_list)
         for item in double_list:
             set_address = 0
             v = 0
@@ -584,12 +584,15 @@ for e in range(len(instruction_ob)):
         compare_value1 = int(reg_lines[value_1],2)
         compare_value2 = int(reg_lines[value_2],2)
 
-print("v1 ",compare_value1)
-print("v2 ",compare_value2)
+#print("v1 ",compare_value1)
+#print("v2 ",compare_value2)
 flag_after_icache = 0
 cycles_for_dcache = 0
 cycles_for_icache = 0
 waiting_for_hazard = [0] * len(instruction_ob)
+iu_pass = [0] * len(instruction_ob)
+id_pass = [0] * len(instruction_ob)
+
 for i in range(1000):
     for j in range(len(instruction_ob)):
 
@@ -598,21 +601,23 @@ for i in range(1000):
         #i-cache
         if (j == 0 and (operands[0] is False) and (instruction_ob[j].IF_complete is False)) or (j == 0 and (operands[0] is True) and if_pass[j] == 1):
             block_address = int((instruction_ob[j].word_address / 4) % 4)
-            if (instruction_ob[j].word_address in block[block_address] and if_pass[j] == 0):
-                i_hit += 1
-                i_access_number += 1
-                cycles_for_icache = icache
-            else:
-                i_miss += 1
-                i_access_number +=1
-                block.update({block_address: []})
-                t_list = []
-                t_list.clear()
-                for kk in range(j, j + 4):
-                    if kk < len(instruction_ob):
-                       t_list.append(instruction_ob[kk].word_address)
-                block.update({block_address: t_list})
-                cycles_for_icache = 2 * (mem + icache)
+            if if_pass[j] == 0:
+                if (instruction_ob[j].word_address in block[block_address] and if_pass[j] == 0):
+                    i_hit += 1
+                    i_access_number += 1
+                    cycles_for_icache = icache
+                else:
+                    i_miss += 1
+                    i_access_number +=1
+                    block.update({block_address: []})
+                    t_list = []
+                    t_list.clear()
+                    for kk in range(j, j + 4):
+                        if kk < len(instruction_ob):
+                           t_list.append(instruction_ob[kk].word_address)
+                    block.update({block_address: t_list})
+                    print(block)
+                    cycles_for_icache = 2 * (mem + icache)
             if if_cycles > cycles_for_icache:
                 if_cycles = cycles_for_icache
             if if_cycles > 0:
@@ -632,6 +637,7 @@ for i in range(1000):
 
         else:
             if (instruction_ob[j].IF_complete is False and ((operands[0] is False) or if_pass[j] == 1) and instruction_ob[j-1].IF_complete): #or((instruction_ob[j].IF_complete is False) and (operands[0] is True) and if_pass[j] ==1): #or (waiting_for_hazard[j-1] == 1 and (instruction_ob[j].IF_complete is False) and operands[0] is True):
+                block_address = int((instruction_ob[j].word_address / 4) % 4)
                 if if_pass[j] == 0:
                     if instruction_ob[j].word_address in block[block_address]:
                         i_hit += 1
@@ -671,42 +677,55 @@ for i in range(1000):
 
 
         # ID stage
-        if instruction_ob[j].ID_complete is False and instruction_ob[j].IF_complete is True:
+        if (instruction_ob[j].ID_complete is False and instruction_ob[j].IF_complete is True) or id_pass[j] == 1:
             x = hazard(instruction_ob[j])
             if x == 0:
-                if instruction_ob[j].IF > 0 and (instruction_ob[j].ID_complete is False):
+                if (instruction_ob[j].IF > 0 and (instruction_ob[j].ID_complete is False)) or id_pass[j] == 1:
                     operands[1] = True
-                    flag_id = 1
-                    instruction_ob[j].ID = count
-                    instruction_ob[j].ID_complete = True
-                    make_busy(instruction_ob[j])
-                    if instruction_ob[j].name == "HLT" and instruction_ob[j - 1].name == "HLT":
-                        instruction_ob[j].ID = 0
-                    if instruction_ob[j].name == "BNE":
-                        print(compare_value1, compare_value2)
-                        if compare_value1 != compare_value2:
-                            dd = unrolling_info[4]
-                            num = 0
-                            instruction_ob = instruction_ob[:-1]
-                            add_pass = add_pass[:-1]
-                            ld_pass = ld_pass[:-1]
-                            mul_pass = mul_pass[:-1]
-                            div_pass = div_pass[:-1]
-                            if_pass = if_pass[:-1]
-                            waiting_for_hazard = waiting_for_hazard[:-1]
+                    if (flag_iu == 1 or operands[2] is False) or j == 0:
+                        flag_id = 1
+                        id_pass[j] = 0
+                        instruction_ob[j].ID = count
+                        instruction_ob[j].ID_complete = True
+                        make_busy(instruction_ob[j])
+                        if instruction_ob[j].name == "HLT" and instruction_ob[j - 1].name == "HLT":
+                            instruction_ob[j].ID = 0
+                        if instruction_ob[j].name == "BNE":
+                            a = int(instruction_ob[j].dest[1:])
+                            b = int(instruction_ob[j].s1[1:])
+                            print(register_data[a],register_data[b])
+                            if register_data[a] != register_data[b]:
+                                dd = unrolling_info[4]
+                                num = 0
+                                instruction_ob = instruction_ob[:-1]
+                                add_pass = add_pass[:-1]
+                                ld_pass = ld_pass[:-1]
+                                mul_pass = mul_pass[:-1]
+                                div_pass = div_pass[:-1]
+                                if_pass = if_pass[:-1]
+                                iu_pass = iu_pass[:-1]
+                                id_pass = id_pass[:-1]
+                                waiting_for_hazard = waiting_for_hazard[:-1]
 
-                            for dd in instruction_ob_copy:
-                                instruction_ob.append(dd)
-                                num += 1
-                            for ww in range(num):
-                                add_pass.append(fp_add)
-                                mul_pass.append(fp_mul)
-                                div_pass.append(fp_divide)
-                                ld_pass.append(0)
-                                if_pass.append(0)
-                                waiting_for_hazard.append(0)
-                                make_free(instruction_ob[j])
-                    continue
+                                for dd in instruction_ob_copy:
+                                    instruction_ob.append(dd)
+                                    num += 1
+                                for ww in range(num):
+                                    add_pass.append(fp_add)
+                                    mul_pass.append(fp_mul)
+                                    div_pass.append(fp_divide)
+                                    ld_pass.append(0)
+                                    if_pass.append(0)
+                                    waiting_for_hazard.append(0)
+                                    iu_pass.append(0)
+                                    id_pass.append(0)
+                                    make_free(instruction_ob[j])
+                            continue
+                        continue
+                    else:
+                      id_pass[j] = 1
+                      continue
+
             if x == 1:
                 operands[1] = True
                 if instruction_ob[j].dest != 0:
@@ -731,7 +750,7 @@ for i in range(1000):
                                     instruction_ob[j].RAW = "Y"
 
 
-                    if not instruction_ob[k].name in ["HLT","BNE","BE","J"]:
+                    if not instruction_ob[j].name in ["HLT","BNE","BE","J"]:
                         for k in range(j):
                             g3 = int(instruction_ob[j].dest[1:])
                             o3 = instruction_ob[j].dest[0]
@@ -758,23 +777,27 @@ for i in range(1000):
         # EXE stage
         # IU cycle.
         if instruction_ob[j].name in ["L.D", "DADDI", "DSUB","DADD","DSUBI","S.D","LW","SW"]:
-            if instruction_ob[j].ID > 0 and (operands[2] is False) and (instruction_ob[j].IU_complete is False):
+            if instruction_ob[j].ID > 0 and ((operands[2] is False) or iu_pass[j] == 1) and (instruction_ob[j].IU_complete is False):
                 operands[2] = True
-                flag_iu = 1
-                instruction_ob[j].IU = count
-                instruction_ob[j].EXE = count
-                instruction_ob[j].IU_complete = True
-                calculate_destination(instruction_ob[j])
-                if instruction_ob[j].name == "DSUB":
-                    compare_value1 = compare_value1 - compare_value2
-                    print("compare1 ",compare_value1)
-                    print("compare2 ",compare_value2)
-                if instruction_ob[j].name == "DSUBI":
-                    compare_value1 = compare_value1 - 1
-                    print("compare1 ",compare_value1)
-                    print("compare2 ",compare_value2)
-                continue
-
+                if flag_ld == 1 or operands[3] is False:
+                    flag_iu = 1
+                    iu_pass[j] = 0
+                    instruction_ob[j].IU = count
+                    instruction_ob[j].EXE = count
+                    instruction_ob[j].IU_complete = True
+                    calculate_destination(instruction_ob[j])
+                    if instruction_ob[j].name == "DSUB":
+                        compare_value1 = compare_value1 - compare_value2
+                        print("compare1 ",compare_value1)
+                        print("compare2 ",compare_value2)
+                    if instruction_ob[j].name == "DSUBI":
+                        compare_value1 = compare_value1 - 1
+                        print("compare1 ",compare_value1)
+                        print("compare2 ",compare_value2)
+                    continue
+                else:
+                    iu_pass[j] = 1
+                    continue
         # MEM stage
         if instruction_ob[j].name in ["L.D","LW","S.D","SW"]:
             if (instruction_ob[j].IU > 0 and (operands[3] is False) and (instruction_ob[j].EXE_complete is False)) or (
@@ -955,7 +978,9 @@ for i in range(1000):
             exe_in_add -= 1
     if exe_in_ld > 0:
         exe_in_ld -= 1
-
+    if flag_iu == 1:
+        operands[5] = False
+        flag_iu = 0
     if flag_if == 1:
         operands[0] = False
         flag_if = 0
@@ -998,6 +1023,8 @@ for instruction_obj in instruction_ob:
     temp_list.clear()
     temp_list.append(instruction_obj.IF)
     temp_list.append(instruction_obj.ID)
+    #temp_list.append(instruction_obj.IU)
+    #temp_list.append(instruction_obj.MEM)
     temp_list.append(instruction_obj.EXE)
     temp_list.append(instruction_obj.WB)
     temp_list.append(instruction_obj.RAW)
