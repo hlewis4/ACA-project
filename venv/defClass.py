@@ -26,4 +26,5 @@ class instructionClass:
         self.word_address = 0
         self.dest_data = 0
         self.ICACHE_complete = False
+        self.raw_instructions = ""
         

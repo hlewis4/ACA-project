@@ -1,15 +1,17 @@
 from defClass import instructionClass as instClass
 import copy
+import sys
+from tabulate import tabulate
 
-with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_2\reg.txt") as reg:
+with open(sys.argv[3], 'r') as reg:
     reg_lines = reg.read().splitlines()
 print("reg_lines",reg_lines)
 
-with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_2\data.txt") as data_v:
+with open(sys.argv[2]) as data_v:
     data_lines = data_v.read().splitlines()
 print("data lines", data_lines)
 
-with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_2\inst.txt") as f:
+with open(sys.argv[1]) as f:
     lines = f.read().splitlines()
 
 # print("Instructions")
@@ -20,7 +22,8 @@ with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_2\inst
 
 for i in range(len(lines)):
     lines[i] = lines[i].lstrip()
-    #print(lines[i])
+
+print("lines",lines)
 
 
 inst = []
@@ -88,8 +91,8 @@ for i in range(len(inst)):  # create a list with nested lists
             else:
                 instruction[i].append(inst[i][j])
 
-#print("instructions:")
-#print(instruction)
+print("instructions:")
+print(instruction)
 
 # assign to objects
 instruction_ob = []
@@ -124,6 +127,13 @@ for u in instruction_ob:
     inc+=1
 for i in instruction_ob:
     print(i.name,i.dest,i.s1,i.s2)
+
+print("before deep cpy lines",lines)
+
+for ss in range(len(instruction_ob)):
+    instruction_ob[ss].raw_instructions = lines[ss]
+    print(instruction_ob[ss].raw_instructions)
+
 #INSTRUCTION OBJECTS COPY
 instruction_ob_copy = []
 instruction_ob_copy = copy.deepcopy(instruction_ob)
@@ -131,7 +141,7 @@ instruction_ob_copy = copy.deepcopy(instruction_ob)
 
 
 #READ CONFIG FILE
-with open(r"C:\Users\hashi\Desktop\ACA\test_cases(4)\test_cases\test_case_2\config.txt") as f:
+with open(sys.argv[4], 'r') as f:
     config = f.read().splitlines()
 print("Config file")
 print(config)
@@ -711,8 +721,9 @@ for i in range(1000):
                         instruction_ob[j].ID = count
                         instruction_ob[j].ID_complete = True
                         make_busy(instruction_ob[j])
-                        if instruction_ob[j].name == "HLT" and instruction_ob[j - 1].name == "HLT":
+                        if instruction_ob[j].name == "HLT":
                             instruction_ob[j].ID = 0
+
                         if instruction_ob[j].name == "BNE":
                             a = int(instruction_ob[j].dest[1:])
                             b = int(instruction_ob[j].s1[1:])
@@ -809,14 +820,6 @@ for i in range(1000):
                     instruction_ob[j].EXE = count
                     instruction_ob[j].IU_complete = True
                     calculate_destination(instruction_ob[j])
-                    if instruction_ob[j].name == "DSUB":
-                        compare_value1 = compare_value1 - compare_value2
-                        print("compare1 ",compare_value1)
-                        print("compare2 ",compare_value2)
-                    if instruction_ob[j].name == "DSUBI":
-                        compare_value1 = compare_value1 - 1
-                        print("compare1 ",compare_value1)
-                        print("compare2 ",compare_value2)
                     continue
                 else:
                     iu_pass[j] = 1
@@ -1073,10 +1076,9 @@ print("IF    ID     EXE     MEM    RAW    WAW     STRUCT")
 temp_list = []
 for instruction_obj in instruction_ob:
     temp_list.clear()
+    temp_list.append(instruction_obj.raw_instructions)
     temp_list.append(instruction_obj.IF)
     temp_list.append(instruction_obj.ID)
-    #temp_list.append(instruction_obj.IU)
-    #temp_list.append(instruction_obj.MEM)
     temp_list.append(instruction_obj.EXE)
     temp_list.append(instruction_obj.WB)
     temp_list.append(instruction_obj.RAW)
@@ -1093,3 +1095,23 @@ print("d misses", d_miss)
 print("d hits ", d_hit)
 print("d block 0",d_block_0)
 print("d block 1 ",d_block_1)
+
+table_list = [[] for hh in range(len(instruction_ob))]
+
+for i in range(len(table_list)):
+    table_list[i].append(instruction_ob[i].raw_instructions)
+    table_list[i].append(instruction_ob[i].IF)
+    table_list[i].append(instruction_ob[i].ID)
+    table_list[i].append(instruction_ob[i].EXE)
+    table_list[i].append(instruction_ob[i].WB)
+    table_list[i].append(instruction_ob[i].RAW)
+    table_list[i].append(instruction_ob[i].WAW)
+    table_list[i].append(instruction_ob[i].STRUCT)
+# print(table_list)
+
+headers = ["INSTRUCTIONS","IF","ID","EXE","WB","RAW","WAW","STRUCT"]
+print("ghfghjgjghc")
+print(tabulate(table_list,headers, tablefmt="github"))
+text_file = open(sys.argv[5], "w")
+text_file.write(tabulate(table_list,headers, tablefmt="github"))
+text_file.close()
